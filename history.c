@@ -51,6 +51,7 @@ void history_show(struct history *hist, int n) {
 	int start;
 	
 	// XXX: use max() macro?
+	n = (n > 10)? 10 : n;
 	start = ((hist->cnt - n) > 0)? hist->cnt - n : 0;
 
 	for (int i = start; i < hist->cnt; i++) {
