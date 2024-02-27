@@ -94,7 +94,23 @@ struct command **command_list_parse(char *s) {
 }
 
 
-void command_free(struct command *list[]) {
+void command_free(struct command **cmdp) {
+	// XXX: sigmask?
+	free(*cmdp);
+	*cmdp = NULL;
+	return;
+}
+
+void command_list_free(struct command **cmd_list) {
+
+	int i;
+
+	for (i = 0; ; i++) {
+		if (cmd_list[i] == NULL) {
+			break;
+		}
+		command_free(&cmd_list[i]);
+	}
 	return;
 }
 

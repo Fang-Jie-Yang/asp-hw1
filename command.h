@@ -18,7 +18,8 @@ extern struct command **command_list_cache;
 // the number of entries in the returned list
 // will be limited by _POSIX_ARG_MAX
 struct command **command_list_parse(char *s);
-void command_free(struct command *list[]);
+void command_free(struct command **cmdp);
+void command_list_free(struct command **cmd_list);
 void command_print(struct command *cmd);
 void command_list_print(struct command **cmd_list);
 
