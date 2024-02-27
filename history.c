@@ -29,6 +29,15 @@ int history_push(struct history *hist, const char *cmd) {
 
 	char *dup;
 
+	if (*cmd == '\0') {
+		return 0;
+	}
+
+	// we don't push if cmd == the previous one
+	if (hist->cnt > 0 && strcmp(cmd, hist->buf[hist->cnt - 1]) == 0) {
+		return 0;
+	}
+
 	if (hist->cnt >= HISTORY_MAX_ENTRY) {
 		fprintf(stderr, "history: exceeding %d commands\n", HISTORY_MAX_ENTRY);
 		return -1;
