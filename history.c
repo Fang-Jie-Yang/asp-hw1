@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "history.h"
 
@@ -12,7 +13,7 @@ struct history *history_new(void) {
 
 	struct history *hist;
 
-	hist = malloc(sizeof(history));
+	hist = (struct history *)malloc(sizeof(struct history));
 	if (hist == NULL) {
 		fprintf(stderr, "error: %s\n", "malloc() failed");
 		return NULL;
@@ -24,14 +25,21 @@ struct history *history_new(void) {
 	return hist;
 }
 
-int history_push(struct history *hist, const char *s) {
+int history_push(struct history *hist, const char *cmd) {
+
+	char *dup;
 
 	if (hist->cnt >= HISTORY_MAX_ENTRY) {
-		fprintf(stderr, "history: exceeding %d commands\n", MAX_HISTORY_ENTRY);
+		fprintf(stderr, "history: exceeding %d commands\n", HISTORY_MAX_ENTRY);
 		return -1;
 	}
 
-	hist->buf[hist->cnt] = s
+	dup = strdup(cmd);
+	if (dup == NULL) {
+		fprintf(stderr, "history: failed to record command\n");
+		return -1;
+	}
+	hist->buf[hist->cnt] = dup;
 	hist->cnt += 1;
 
 	return 0;
@@ -40,7 +48,12 @@ int history_push(struct history *hist, const char *s) {
 // clear history buffer and free up strings stored in it
 void history_clear(struct history *hist) {
 
-	hist->buf[0] = NULL;
+	int i;
+
+	for (i = 0; i < hist->cnt; i++) {
+		free(hist->buf[i]);
+		hist->buf[i] = NULL;
+	}
 	hist->cnt = 0;
 
 	return;
@@ -55,7 +68,7 @@ void history_show(struct history *hist, int n) {
 	start = ((hist->cnt - n) > 0)? hist->cnt - n : 0;
 
 	for (int i = start; i < hist->cnt; i++) {
-		printf("%*d  %s", HISTORY_NUM_WIDTH, i, hist->buf[i]);
+		printf("%*d  %s\n", HISTORY_NUM_WIDTH, i, hist->buf[i]);
 	}
 
 	return;
