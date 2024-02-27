@@ -5,6 +5,7 @@
 
 #include "history.h"
 #include "command.h"
+#include "list.h"
 
 int main(void) {
 
@@ -12,7 +13,7 @@ int main(void) {
 	size_t len = 0;
 	ssize_t read_len;
 	struct history *hist;
-	struct command **cmd_list;
+	LIST_HEAD(cmd_list);
 	int i;
 
 	// TODO: Ctrl+c signal handler
@@ -37,12 +38,16 @@ int main(void) {
 		}
 		history_push(hist, input);
 
-		// TODO: split line into cmds by "|"
-		cmd_list = command_list_parse(input);
+		command_list_parse(&cmd_list, input);
+		if (list_empty(&cmd_list)) {
+			continue;
+		}
 
-		// for each cmd, split by " "
+		command_list_print(&cmd_list);
+		// for each cmd
 			// handle cmd+arg
-		command_list_print(cmd_list);
+
+		command_list_free(&cmd_list);
 		history_show(hist, 10);
 
 	}

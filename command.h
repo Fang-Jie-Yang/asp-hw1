@@ -4,23 +4,21 @@
 #define COMMAND_PIPE  "|"
 #define COMMAND_DELIM " "
 
+#include "list.h"
+
 struct command {
-	char *pathname;
+	struct list_head list_head;
 	// null-terminated, 
 	char *argv[];
 	// char *envp[];
 };
 
-// the "cache" for storing parsing outcome
-// some we don't have to alloc everytime
-extern struct command **command_list_cache;
-
 // the number of entries in the returned list
 // will be limited by _POSIX_ARG_MAX
-struct command **command_list_parse(char *s);
-void command_free(struct command **cmdp);
-void command_list_free(struct command **cmd_list);
+void command_list_parse(struct list_head *cmd_list, char *s);
+//void command_free(struct command **cmdp);
+void command_list_free(struct list_head *cmd_list);
 void command_print(struct command *cmd);
-void command_list_print(struct command **cmd_list);
+void command_list_print(struct list_head *cmd_list);
 
 #endif

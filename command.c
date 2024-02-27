@@ -27,16 +27,15 @@ static struct command *command_parse(char *s) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		return NULL;
 	}
-	res->pathname = token;
 
 	while (token != NULL) {
-		fprintf(stderr, "-- debug: %s\n", token);
+		//fprintf(stderr, "-- debug: %s\n", token);
 		res->argv[argc] = token;
 		argc++;
 
 		if (argc >= _POSIX_ARG_MAX) {
 			fprintf(stderr, "error: too many arguments\n");
-			return NULL;
+			goto fail;
 		}
 
 		token = strtok(NULL, COMMAND_DELIM);
@@ -45,72 +44,82 @@ static struct command *command_parse(char *s) {
 	res->argv[argc] = (char *)NULL;
 
 	return res;
+
+fail:
+	free(res);
+	return NULL;
 }
 
 // the number of entries in the returned array
 // will be limited by _POSIX_ARG_MAX
 // return a null-terminated list
-struct command **command_list_parse(char *s) {
+void command_list_parse(struct list_head *cmd_list, char *s) {
 
 	char *sub;
 	int cnt = 0;
 	struct command *cmd;
 
-	if (command_list_cache == NULL) {
-		command_list_cache = malloc(sizeof(struct command *) * _POSIX_ARG_MAX);
-		if (command_list_cache == NULL) {
-			fprintf(stderr, "error: %s\n", strerror(errno));
-		}
+	if (*s == '\0') {
+		return;
 	}
 
-	if (*s == '\0') {
-		return NULL;
+	// DEBUG: make sure the given list_head is empry
+	if (!list_empty(cmd_list)) {
+		fprintf(stderr, "command_list_parse: not empty list\n");
+		INIT_LIST_HEAD(cmd_list);
 	}
 
 	// use strsep because we don't allow contiguous '|'
 	sub = strsep(&s, COMMAND_PIPE);
 	while (sub != NULL) {
-		fprintf(stderr, "debug: %s\n", sub);
+		//fprintf(stderr, "debug: %s\n", sub);
 		cmd = command_parse(sub);
 
 		if (cmd == NULL) {
 			// we encounter a empty command
 			fprintf(stderr, "error: parsing error\n");
-			return NULL;
+			goto fail;
 		}
 
-		command_list_cache[cnt] = cmd;
+		list_add_tail((struct list_head *)cmd, cmd_list);
 		cnt++;
 
 		if (cnt >= _POSIX_ARG_MAX) {
 			fprintf(stderr, "error: too many arguments\n");
-			return NULL;
+			goto fail;
 		}
 		sub = strsep(&s, COMMAND_PIPE);
 	}
-	command_list_cache[cnt] = (struct command *)NULL;
+	return;
 
-	return command_list_cache;
+fail:
+	command_list_free(cmd_list);	
 }
 
 
-void command_free(struct command **cmdp) {
+static void command_free(struct command **cmdp) {
 	// XXX: sigmask?
 	free(*cmdp);
 	*cmdp = NULL;
 	return;
 }
 
-void command_list_free(struct command **cmd_list) {
+void command_list_free(struct list_head *cmd_list) {
 
-	int i;
+	struct list_head *node;
+	struct list_head *tmp;
 
-	for (i = 0; ; i++) {
-		if (cmd_list[i] == NULL) {
-			break;
-		}
-		command_free(&cmd_list[i]);
+	if (cmd_list == NULL) {
+		return;
 	}
+
+	node = cmd_list->next;
+	while (node != cmd_list) {
+		tmp = node->next;
+		command_free((struct command **)&node);
+		node = tmp;
+	}
+	INIT_LIST_HEAD(cmd_list);
 	return;
 }
 
@@ -122,33 +131,25 @@ void command_print(struct command *cmd) {
 		return;
 	}
 
-	if (cmd->pathname == NULL) {
-		fprintf(stderr, "==== NULL pathname!\n");
-		return;
-	}
-	fprintf(stderr, "==== pathname: %s\n", cmd->pathname);
 	for (i = 0; ; i++) {
 		if (cmd->argv[i] == NULL) {
 			break;
 		}
-		fprintf(stderr, "==== argv    : %s\n", cmd->argv[i]);
+		fprintf(stderr, "==== argv[%d] : %s\n", i, cmd->argv[i]);
 	}
 	return;
 }
 
-void command_list_print(struct command **cmd_list) {
+void command_list_print(struct list_head *cmd_list) {
 
-	int i;
+	struct list_head *node;
 
 	if (cmd_list == NULL) {
 		return;
 	}
 
-	for (i = 0; ; i++) {
-		if (cmd_list[i] == NULL) {
-			break;
-		}
-		command_print(cmd_list[i]);
+	list_for_each(node, cmd_list) {
+		command_print((struct command *)node);
 	}
 	return;
 }
