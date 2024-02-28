@@ -9,5 +9,5 @@ builtin: built-in.h built-in.c
 	gcc -c -o built-in.o built-in.c
 
 shell: shell.c history command builtin
-	gcc -o cs5374_sh shell.c history.o command.o
+	gcc -o cs5374_sh shell.c history.o command.o built-in.o
 
