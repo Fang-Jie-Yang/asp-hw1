@@ -46,7 +46,6 @@ int main(void) {
 	char *input = NULL;
 	size_t len = 0;
 	ssize_t read_len;
-	struct history *hist;
 	LIST_HEAD(cmd_list_head);
 	struct list_head *cmd;
 	int n_childs;
@@ -54,7 +53,7 @@ int main(void) {
 
 	// TODO: Ctrl+c signal handler
 
-	hist = history_new();
+	history_init();
 
 	while (1) {
 
@@ -68,7 +67,7 @@ int main(void) {
 		if (input[read_len - 1] == '\n') {
 			input[read_len - 1] = '\0';
 		}
-		history_push(hist, input);
+		history_push(input);
 
 		command_list_parse(&cmd_list_head, input);
 		if (list_empty(&cmd_list_head)) {
@@ -96,7 +95,7 @@ int main(void) {
 		}
 
 		command_list_free(&cmd_list_head);
-		history_show(hist, 10);
+		history_show(10);
 
 	}
 
