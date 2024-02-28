@@ -1,20 +1,21 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stdio.h>
 
+#include "built-in.h"
 #include "pipe.h"
 #include "history.h"
 
+static int do_cd(struct command *cmd);
+static int do_history(struct command *cmd);
+static int do_exit(struct command *cmd);
 
-static int do_cd(const struct *command cmd);
-static int do_history(const struct *command cmd);
-static int do_exit(const struct *command cmd);
-
-static struct builtin_struct builtins[] {
-	{ "cd", 		do_cd 		}
-	{ "history", 	do_history 	}
-	{ "exit",		do_exit		}
-	{ NULL,			NULL		}
+static struct builtin_struct builtins[] = {
+	{ "cd", 		do_cd 		},
+	{ "history", 	do_history 	},
+	{ "exit",		do_exit		},
+	{ NULL,			NULL		},
 };
 
 int is_builtin(const struct command *cmd) {
@@ -28,7 +29,7 @@ int is_builtin(const struct command *cmd) {
 	return 0;
 }
 
-int do_builtin(int idx, const struct command *cmd) {
+int do_builtin(int idx, struct command *cmd) {
 	return builtins[idx].fn(cmd);
 }
 
@@ -36,12 +37,12 @@ int do_builtin(int idx, const struct command *cmd) {
 // so we actually don't have to free pipes before handling commands
 // if we want to support pipe for built-ins.
 // But we do have to free them after the command is finished
-static void builtin_free_pipes(const struct *command cmd) {
-	pipe_free(cmd->pipe_fd[0]);	
-	pipe_free(cmd->pipe_fd[1]);	
+static void builtin_free_pipes(struct command *cmd) {
+	pipe_close(&cmd->pipe_fd[0]);	
+	pipe_close(&cmd->pipe_fd[1]);	
 }
 
-static int do_cd(const struct *command cmd) {
+static int do_cd(struct command *cmd) {
 
 	int ret = 0;
 
@@ -58,7 +59,7 @@ end:
 	return ret;
 }
 
-static int do_history(const struct *command cmd) {
+static int do_history(struct command *cmd) {
 
 	int ret = 0;
 	char *endptr;
@@ -88,7 +89,7 @@ end:
 	return ret;
 }
 
-static int do_exit(const struct *command cmd) {
+static int do_exit(struct command *cmd) {
 
 	int ret = 0;
 
