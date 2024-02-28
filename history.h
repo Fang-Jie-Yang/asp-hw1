@@ -8,10 +8,15 @@ struct history {
 	int cnt;
 };
 
-struct history *history_new(void);
-int history_push(struct history *hist, const char *s);
+// global history structure
+extern struct history *hist;
+
+// return -1 on error
+int history_init(void);
+int history_push(const char *s);
 // clear history buffer and free up strings stored in it
-void history_clear(struct history *hist);
-void history_show(struct history *hist, int n);
+void history_clear();
+void history_show(long int n);
+void history_free();
 
 #endif

@@ -9,25 +9,35 @@
 //	int cnt;
 //}
 
-struct history *history_new(void) {
+struct history *hist;
 
-	struct history *hist;
+int history_init(void) {
+
+	if (hist != NULL) {
+		fprintf(stderr, "error: history already init'd\n");
+		return -1;
+	}
 
 	hist = (struct history *)malloc(sizeof(struct history));
 	if (hist == NULL) {
 		fprintf(stderr, "error: %s\n", "malloc() failed");
-		return NULL;
+		return -1;
 	}
 
 	hist->buf[0] = NULL;
 	hist->cnt = 0;
 
-	return hist;
+	return 0;
 }
 
-int history_push(struct history *hist, const char *cmd) {
+int history_push(const char *cmd) {
 
 	char *dup;
+
+	if (hist == NULL) {
+		fprintf(stderr, "error: history not init'd\n");
+		return -1;
+	}
 
 	if (*cmd == '\0') {
 		return 0;
@@ -55,9 +65,14 @@ int history_push(struct history *hist, const char *cmd) {
 }
 
 // clear history buffer and free up strings stored in it
-void history_clear(struct history *hist) {
+void history_clear() {
 
 	int i;
+
+	if (hist == NULL) {
+		fprintf(stderr, "error: history not init'd\n");
+		return;
+	}
 
 	for (i = 0; i < hist->cnt; i++) {
 		free(hist->buf[i]);
@@ -68,17 +83,34 @@ void history_clear(struct history *hist) {
 	return;
 }
 
-void history_show(struct history *hist, int n) {
+void history_show(long int n) {
 
-	int start;
+	long int start;
+	long int i;
+
+	if (hist == NULL) {
+		fprintf(stderr, "error: history not init'd\n");
+		return;
+	}
 	
 	// XXX: use max() macro?
 	n = (n > 10)? 10 : n;
 	start = ((hist->cnt - n) > 0)? hist->cnt - n : 0;
 
-	for (int i = start; i < hist->cnt; i++) {
-		printf("%*d  %s\n", HISTORY_NUM_WIDTH, i, hist->buf[i]);
+	for (i = start; i < hist->cnt; i++) {
+		printf("%*ld  %s\n", HISTORY_NUM_WIDTH, i, hist->buf[i]);
 	}
 
 	return;
+}
+
+void history_free() {
+
+	if (hist == NULL) {
+		fprintf(stderr, "error: history not init'd\n");
+		return;
+	}
+
+	// XXX: error handling
+	free(hist);
 }
