@@ -1,13 +1,18 @@
 
-command: command.h command.c list.h
-	gcc -c -o command.o command.c
+CC = gcc
+CFLAGS = -Wall
 
-history: history.h history.c
-	gcc -c -o history.o history.c
+OBJS = command.o history.o built-in.o
 
-builtin: built-in.h built-in.c
-	gcc -c -o built-in.o built-in.c
+command.o: command.c command.h list.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-shell: shell.c history command builtin
-	gcc -o cs5374_sh shell.c history.o command.o built-in.o
+history.o: history.c history.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+built-in.o: built-in.c built-in.h pipe.h history.h command.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+cs5374_sh: shell.c $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@
 
