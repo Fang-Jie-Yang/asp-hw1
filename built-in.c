@@ -6,6 +6,7 @@
 #include "built-in.h"
 #include "pipe.h"
 #include "history.h"
+#include "command.h"
 
 static int do_cd(struct command *cmd);
 static int do_history(struct command *cmd);
@@ -52,7 +53,10 @@ static int do_cd(struct command *cmd) {
 		goto end;
 	}
 
-	// cd
+	if (chdir(cmd->argv[1]) == -1) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		ret = -1;
+	}
 
 end:
 	builtin_free_pipes(cmd);

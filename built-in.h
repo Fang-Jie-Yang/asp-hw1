@@ -1,9 +1,7 @@
 #ifndef BUILT_IN_H
 #define BUILT_IN_H
 
-#include "history.h"
 #include "command.h"
-
 
 struct builtin_struct {
 	const char *cmd;
