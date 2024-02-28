@@ -9,6 +9,7 @@
 #include "command.h"
 #include "list.h"
 #include "pipe.h"
+#include "built-in.h"
 
 static inline int do_command(struct command *cmd) {
 
@@ -47,9 +48,11 @@ int main(void) {
 	size_t len = 0;
 	ssize_t read_len;
 	LIST_HEAD(cmd_list_head);
-	struct list_head *cmd;
+	struct list_head *node;
+	struct command *cmd;
 	int n_childs;
 	int i;
+	int builtin_idx;
 
 	// TODO: Ctrl+c signal handler
 
@@ -75,16 +78,30 @@ int main(void) {
 		}
 
 		command_list_print(&cmd_list_head);
-		list_for_each(cmd, &cmd_list_head) {
-			if (cmd->next != &cmd_list_head) {
-				if (pipe_make((struct command *)cmd, (struct command *)cmd->next)) {
+
+		n_childs = 0;
+		list_for_each(node, &cmd_list_head) {
+
+			cmd = (struct command *)node;
+
+			if (node->next != &cmd_list_head) {
+				if (pipe_make(cmd, (struct command *)node->next)) {
 					break;
 				}
 			}
-			if (do_command((struct command *)cmd)) {
-				break;
+
+			builtin_idx = is_builtin(cmd);
+			fprintf(stderr, "debug: built-in id= %d\n", builtin_idx);
+			if (builtin_idx) {
+				if (do_builtin(builtin_idx, cmd)) {
+					continue;
+				}
 			} else {
-				n_childs++;
+				if (do_command(cmd)) {
+					break;
+				} else {
+					n_childs++;
+				}
 			}
 		}
 
@@ -95,7 +112,7 @@ int main(void) {
 		}
 
 		command_list_free(&cmd_list_head);
-		history_show(10);
+		//history_show(10);
 
 	}
 
