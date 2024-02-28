@@ -27,6 +27,10 @@ static struct command *command_parse(char *s) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		return NULL;
 	}
+	res->pipe_fd[0] = -1;
+	res->pipe_fd[1] = -1;
+	res->unused_fd[0] = -1;
+	res->unused_fd[1] = -1;
 
 	while (token != NULL) {
 		//fprintf(stderr, "-- debug: %s\n", token);
