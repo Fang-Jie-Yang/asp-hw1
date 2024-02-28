@@ -31,6 +31,7 @@ static struct command *command_parse(char *s) {
 	res->pipe_fd[1] = -1;
 	res->unused_fd[0] = -1;
 	res->unused_fd[1] = -1;
+	res->argc = -1;
 
 	while (token != NULL) {
 		//fprintf(stderr, "-- debug: %s\n", token);
@@ -45,6 +46,7 @@ static struct command *command_parse(char *s) {
 		token = strtok(NULL, COMMAND_DELIM);
 	}
 
+	res->argc = argc;
 	res->argv[argc] = (char *)NULL;
 
 	return res;

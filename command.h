@@ -11,6 +11,7 @@ struct command {
 	int pipe_fd[2];
 	int unused_fd[2];
 	// null-terminated, 
+	int argc;
 	char *argv[];
 	// char *envp[];
 };
