@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include "history.h"
 #include "command.h"
@@ -29,7 +30,7 @@ static inline int do_command(struct command *cmd) {
 		}
 		pipe_close(&cmd->unused_fd[0]);
 		pipe_close(&cmd->unused_fd[1]);
-		execlp("ls","ls",NULL);
+		execv(cmd->argv[0], cmd->argv);
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
 	}
@@ -48,6 +49,8 @@ int main(void) {
 	struct history *hist;
 	LIST_HEAD(cmd_list_head);
 	struct list_head *cmd;
+	int n_childs;
+	int i;
 
 	// TODO: Ctrl+c signal handler
 
@@ -81,6 +84,14 @@ int main(void) {
 			}
 			if (do_command((struct command *)cmd)) {
 				break;
+			} else {
+				n_childs++;
+			}
+		}
+
+		for (i = 0; i < n_childs; i++) {
+			if (wait(NULL) == -1) {
+				fprintf(stderr, "error: %s\n", strerror(errno));
 			}
 		}
 
