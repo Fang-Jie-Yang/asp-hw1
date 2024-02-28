@@ -71,19 +71,25 @@ static int do_history(struct command *cmd) {
 		goto end;
 	}
 
+	if (cmd->argc == 1) {
+		history_show(10);
+		goto end;
+	}
+
 	if (strcmp(cmd->argv[1], "-c") == 0) {
 		history_clear();
-	} else {
-		n = strtol(cmd->argv[1], &endptr, 10);
+		goto end;
+	} 
 
-		if (*endptr != '\0') {
-			fprintf(stderr, "error: %s\n", strerror(errno));
-			ret = -1;
-			goto end;	
-		} else {
-			history_show(n);	
-		}	
-	}
+	n = strtol(cmd->argv[1], &endptr, 10);
+
+	if (*endptr != '\0') {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		ret = -1;
+		goto end;	
+	} 
+	history_show(n);	
+
 end:
 	builtin_free_pipes(cmd);
 	return ret;
