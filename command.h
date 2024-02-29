@@ -9,7 +9,7 @@
 struct command {
 	struct list_head list_head;
 	int pipe_fd[2];
-	int unused_fd[2];
+	int unused_fd;
 	// null-terminated, 
 	int argc;
 	char *argv[];

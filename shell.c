@@ -15,30 +15,35 @@ static inline int do_command(struct command *cmd) {
 
 	pid_t pid;
 
+	fprintf(stderr, "debug: command: %s\n", cmd->argv[0]);
+	fprintf(stderr, "debug: |-- pipe  fds: %d %d\n", cmd->pipe_fd[0], cmd->pipe_fd[1]);
+	fprintf(stderr, "debug: \'-- unused fd: %d \n", cmd->unused_fd);
+
 	pid = fork();
 	if(pid == -1){
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		return -1;
 	}
-
 	// child
 	if(pid == 0){
-		if (pipe_dup2(&cmd->pipe_fd[0], STDOUT_FILENO)) {
+		if (pipe_dup2(&cmd->pipe_fd[0], STDIN_FILENO) == -1) {
+			// XXX
 			exit(-1);
 		}
-		if (pipe_dup2(&cmd->pipe_fd[1], STDIN_FILENO)) {
+		if (pipe_dup2(&cmd->pipe_fd[1], STDOUT_FILENO) == -1) {
+			// XXX
 			exit(-1);
 		}
-		pipe_close(&cmd->unused_fd[0]);
-		pipe_close(&cmd->unused_fd[1]);
+		pipe_close(&cmd->unused_fd);
+		fprintf(stderr, "debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
 		execv(cmd->argv[0], cmd->argv);
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
+	} else {
+		// parent
+		pipe_close(&cmd->pipe_fd[0]);
+		pipe_close(&cmd->pipe_fd[1]);
 	}
-
-	// parent
-	pipe_close(&cmd->pipe_fd[0]);
-	pipe_close(&cmd->pipe_fd[1]);
 	return 0;
 }
 
@@ -91,7 +96,6 @@ int main(void) {
 			}
 
 			builtin_idx = is_builtin(cmd);
-			fprintf(stderr, "debug: built-in id= %d\n", builtin_idx);
 			if (builtin_idx) {
 				if (do_builtin(builtin_idx, cmd)) {
 					continue;
@@ -105,6 +109,7 @@ int main(void) {
 			}
 		}
 
+		fprintf(stderr, "debug: n_childs = %d\n", n_childs);
 		for (i = 0; i < n_childs; i++) {
 			if (wait(NULL) == -1) {
 				fprintf(stderr, "error: %s\n", strerror(errno));
