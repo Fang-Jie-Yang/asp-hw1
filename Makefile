@@ -7,6 +7,7 @@ DEBUG_FLAGS =
 DEBUG_PIPE ?= 0
 DEBUG_CMD ?= 0
 DEBUG_SHELL ?= 0
+DEBUG_HIST ?= 0
 ifeq ($(DEBUG_PIPE), 1)
 	DEBUG_FLAGS += -DDEBUG_PIPE
 endif
@@ -15,6 +16,9 @@ ifeq ($(DEBUG_CMD), 1)
 endif
 ifeq ($(DEBUG_SHELL), 1)
 	DEBUG_FLAGS += -DDEBUG_SHELL
+endif
+ifeq ($(DEBUG_HIST), 1)
+	DEBUG_FLAGS += -DDEBUG_HIST
 endif
 
 SRCS = list.h pipe.h command.c command.h built-in.c built-in.h history.c history.h shell.c
