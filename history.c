@@ -4,10 +4,7 @@
 
 #include "history.h"
 
-//struct history {
-//	char *buf[HISTORY_MAX_ENTRY];
-//	int cnt;
-//}
+#define HISTORY_NUM_WIDTH 5
 
 struct history *hist;
 
@@ -39,14 +36,12 @@ int history_push(const char *cmd) {
 		return -1;
 	}
 
-	if (*cmd == '\0') {
+	if (*cmd == '\0')
 		return 0;
-	}
 
 	// we don't push if cmd == the previous one
-	if (hist->cnt > 0 && strcmp(cmd, hist->buf[hist->cnt - 1]) == 0) {
+	if (hist->cnt > 0 && strcmp(cmd, hist->buf[hist->cnt - 1]) == 0)
 		return 0;
-	}
 
 	if (hist->cnt >= HISTORY_MAX_ENTRY) {
 		fprintf(stderr, "history: exceeding %d commands\n", HISTORY_MAX_ENTRY);
@@ -83,7 +78,7 @@ void history_clear() {
 	return;
 }
 
-void history_show(long int n) {
+void history_show(FILE *out, long int n) {
 
 	long int start;
 	long int i;
@@ -92,14 +87,16 @@ void history_show(long int n) {
 		fprintf(stderr, "error: history not init'd\n");
 		return;
 	}
-	
+#ifdef DEBUG_HIST
+	fprintf(stderr, "(history) debug: writing to fd=%d\n", fileno(out));
+#endif
 	// XXX: use max() macro?
 	n = (n > 10)? 10 : n;
 	start = ((hist->cnt - n) > 0)? hist->cnt - n : 0;
 
-	for (i = start; i < hist->cnt; i++) {
-		printf("%*ld  %s\n", HISTORY_NUM_WIDTH, i, hist->buf[i]);
-	}
+	for (i = start; i < hist->cnt; i++)
+		fprintf(out, "%*ld  %s\n", HISTORY_NUM_WIDTH, i, hist->buf[i]);
+	fflush(out);
 
 	return;
 }

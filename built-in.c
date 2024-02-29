@@ -35,9 +35,12 @@ int do_builtin(int idx, struct command *cmd) {
 }
 
 // we do built-ins in parent process,
-// so we actually don't have to free pipes before handling commands
-// if we want to support pipe for built-ins.
+// so if we want to support pipe for built-ins,
+// we actually don't have to free pipes before handling commands.
 // But we do have to free them after the command is finished
+// Note: don't have to worry about adding unused pipe to child,
+//       since we don't fork() new child before built-in fn returns,
+//       and we close the pipes before returning
 static void builtin_free_pipes(struct command *cmd) {
 	pipe_close(&cmd->pipe_fd[0]);	
 	pipe_close(&cmd->pipe_fd[1]);	
@@ -68,6 +71,7 @@ static int do_history(struct command *cmd) {
 	int ret = 0;
 	char *endptr;
 	long int n;
+	FILE *out_stream;
 
 	if (cmd->argc > 2) {
 		fprintf(stderr, "error: cd: invalid arguments\n");
@@ -75,8 +79,20 @@ static int do_history(struct command *cmd) {
 		goto end;
 	}
 
+	// allowing history output to be piped
+	if (cmd->pipe_fd[1] != -1) {
+		out_stream = fdopen(cmd->pipe_fd[1], "w");
+		if (out_stream == NULL) {
+			fprintf(stderr, "error: %s\n", strerror(errno));
+			ret = -1;
+			goto end;
+		}
+	} else {
+		out_stream = stdout;
+	}
+
 	if (cmd->argc == 1) {
-		history_show(10);
+		history_show(out_stream, 10);
 		goto end;
 	}
 
@@ -92,7 +108,7 @@ static int do_history(struct command *cmd) {
 		ret = -1;
 		goto end;	
 	} 
-	history_show(n);	
+	history_show(out_stream, n);
 
 end:
 	builtin_free_pipes(cmd);
