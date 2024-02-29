@@ -2,6 +2,10 @@
 #define PIPE_H
 
 #include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
 
 #include "command.h"
 
@@ -25,14 +29,15 @@ static inline int pipe_make(struct command *cmd, struct command *next) {
 
 static inline void pipe_close(int *pipefd) {
 
-	fprintf(stderr, "debug: %*d: close(%d)\n", 5, getpid(), *pipefd);
+#ifdef DEBUG_PIPE
+	fprintf(stderr, "(pipe) debug: %*d: close(%d)\n", 5, getpid(), *pipefd);
+#endif
 
 	if (*pipefd == -1)
 		return;
 
 	if (close(*pipefd) == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
-		fprintf(stderr, "debug: close() on %d\n", *pipefd);
 		// XXX: I think we have to abort in this case
 		// TODO: free resources
 		exit(-1);
@@ -45,15 +50,18 @@ static inline int pipe_dup2(int *pipefd, int newfd) {
 
 	int ret = 0;
 
-	fprintf(stderr, "debug: %*d: dup2 (%d) => (%d)\n", 5, getpid(), *pipefd, newfd);
+#ifdef DEBUG_PIPE
+	fprintf(stderr, "(pipe) debug: %*d: dup2 (%d) => (%d)\n", 5, getpid(), *pipefd, newfd);
+#endif
 
 	if (*pipefd == -1)
 		return 0;
 
 	ret = dup2(*pipefd, newfd);
-	if (ret == -1) {
+
+	if (ret == -1) 
 		fprintf(stderr, "error: %s\n", strerror(errno));
-	}
+
 	pipe_close(pipefd);
 	return ret;
 }

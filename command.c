@@ -64,13 +64,12 @@ void command_list_parse(struct list_head *cmd_list, char *s) {
 	int cnt = 0;
 	struct command *cmd;
 
-	if (*s == '\0') {
+	if (*s == '\0')
 		return;
-	}
 
-	// DEBUG: make sure the given list_head is empry
+	// XXX: make sure the given list_head is empry
 	if (!list_empty(cmd_list)) {
-		fprintf(stderr, "command_list_parse: not empty list\n");
+		fprintf(stderr, "warning: command_list_parse: not empty list\n");
 		INIT_LIST_HEAD(cmd_list);
 	}
 
@@ -114,9 +113,8 @@ void command_list_free(struct list_head *cmd_list) {
 	struct list_head *node;
 	struct list_head *tmp;
 
-	if (cmd_list == NULL) {
+	if (cmd_list == NULL)
 		return;
-	}
 
 	node = cmd_list->next;
 	while (node != cmd_list) {
@@ -128,33 +126,33 @@ void command_list_free(struct list_head *cmd_list) {
 	return;
 }
 
-void command_print(struct command *cmd) {
-
+void command_debug_print(struct command *cmd) {
+#ifdef CMD_DEBUG
 	int i;
 
-	if (cmd == NULL) {
+	if (cmd == NULL) 
 		return;
-	}
 
 	for (i = 0; ; i++) {
-		if (cmd->argv[i] == NULL) {
+		if (cmd->argv[i] == NULL)
 			break;
-		}
-		fprintf(stderr, "==== argv[%d] : %s\n", i, cmd->argv[i]);
+		fprintf(stderr, "argv[%d] : %s\n", i, cmd->argv[i]);
 	}
+	fprintf(stderr, "\n");
+#endif
 	return;
 }
 
-void command_list_print(struct list_head *cmd_list) {
-
+void command_debug_list_print(struct list_head *cmd_list) {
+#ifdef CMD_DEBUG
 	struct list_head *node;
 
-	if (cmd_list == NULL) {
+	if (cmd_list == NULL)
 		return;
-	}
 
 	list_for_each(node, cmd_list) {
 		command_print((struct command *)node);
 	}
+#endif
 	return;
 }

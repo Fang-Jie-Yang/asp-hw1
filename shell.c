@@ -15,9 +15,18 @@ static inline int do_command(struct command *cmd) {
 
 	pid_t pid;
 
-	fprintf(stderr, "debug: command: %s\n", cmd->argv[0]);
-	fprintf(stderr, "debug: |-- pipe  fds: %d %d\n", cmd->pipe_fd[0], cmd->pipe_fd[1]);
-	fprintf(stderr, "debug: \'-- unused fd: %d \n", cmd->unused_fd);
+#ifdef SHELL_DEBUG
+	char debug_info[1024] = "\0";
+	char line[256] = "\0";
+
+	snprintf(line, 256, "(shell) debug: command: %s\n", cmd->argv[0]);
+	strncat(debug_info, line, 1024);
+	snprintf(line, 256, "               |-- pipe  fds: %d %d\n", cmd->pipe_fd[0], cmd->pipe_fd[1]);
+	strncat(debug_info, line, 1024);
+	snprintf(line, 256, "               '-- unused fd: %d \n", cmd->unused_fd);
+	strncat(debug_info, line, 1024);
+	fprintf(stderr, "%s", debug_info);
+#endif
 
 	pid = fork();
 	if(pid == -1){
@@ -35,7 +44,9 @@ static inline int do_command(struct command *cmd) {
 			exit(-1);
 		}
 		pipe_close(&cmd->unused_fd);
-		fprintf(stderr, "debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
+#ifdef SHELL_DEBUG
+		fprintf(stderr, "(shell) debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
+#endif
 		execv(cmd->argv[0], cmd->argv);
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
@@ -72,52 +83,45 @@ int main(void) {
 			continue;
 		}
 		// remove trailing newline
-		if (input[read_len - 1] == '\n') {
+		if (input[read_len - 1] == '\n')
 			input[read_len - 1] = '\0';
-		}
+
 		history_push(input);
 
 		command_list_parse(&cmd_list_head, input);
-		if (list_empty(&cmd_list_head)) {
+		if (list_empty(&cmd_list_head))
 			continue;
-		}
 
-		command_list_print(&cmd_list_head);
+		command_debug_list_print(&cmd_list_head);
 
 		n_childs = 0;
 		list_for_each(node, &cmd_list_head) {
 
 			cmd = (struct command *)node;
 
-			if (node->next != &cmd_list_head) {
-				if (pipe_make(cmd, (struct command *)node->next)) {
+			if (node->next != &cmd_list_head)
+				if (pipe_make(cmd, (struct command *)node->next))
 					break;
-				}
-			}
 
 			builtin_idx = is_builtin(cmd);
 			if (builtin_idx) {
-				if (do_builtin(builtin_idx, cmd)) {
+				if (do_builtin(builtin_idx, cmd))
 					continue;
-				}
 			} else {
-				if (do_command(cmd)) {
+				if (do_command(cmd))
 					break;
-				} else {
+				else
 					n_childs++;
-				}
 			}
 		}
-
+#ifdef SHELL_DEBUG
 		fprintf(stderr, "debug: n_childs = %d\n", n_childs);
-		for (i = 0; i < n_childs; i++) {
-			if (wait(NULL) == -1) {
+#endif
+		for (i = 0; i < n_childs; i++)
+			if (wait(NULL) == -1)
 				fprintf(stderr, "error: %s\n", strerror(errno));
-			}
-		}
 
 		command_list_free(&cmd_list_head);
-		//history_show(10);
 
 	}
 
