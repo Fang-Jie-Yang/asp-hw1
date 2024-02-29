@@ -23,5 +23,6 @@ void command_list_parse(struct list_head *cmd_list, char *s);
 void command_list_free(struct list_head *cmd_list);
 void command_debug_print(struct command *cmd);
 void command_debug_list_print(struct list_head *cmd_list);
+void command_debug_pipe(struct command *cmd);
 
 #endif

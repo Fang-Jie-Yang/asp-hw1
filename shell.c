@@ -15,17 +15,8 @@ static inline int do_command(struct command *cmd) {
 
 	pid_t pid;
 
-#ifdef SHELL_DEBUG
-	char debug_info[1024] = "\0";
-	char line[256] = "\0";
-
-	snprintf(line, 256, "(shell) debug: command: %s\n", cmd->argv[0]);
-	strncat(debug_info, line, 1024);
-	snprintf(line, 256, "               |-- pipe  fds: %d %d\n", cmd->pipe_fd[0], cmd->pipe_fd[1]);
-	strncat(debug_info, line, 1024);
-	snprintf(line, 256, "               '-- unused fd: %d \n", cmd->unused_fd);
-	strncat(debug_info, line, 1024);
-	fprintf(stderr, "%s", debug_info);
+#ifdef DEBUG_SHELL
+	fprintf(stderr, "(shell) debug: fork() for %s\n", cmd->argv[0]);
 #endif
 
 	pid = fork();
@@ -44,7 +35,7 @@ static inline int do_command(struct command *cmd) {
 			exit(-1);
 		}
 		pipe_close(&cmd->unused_fd);
-#ifdef SHELL_DEBUG
+#ifdef DEBUG_SHELL
 		fprintf(stderr, "(shell) debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
 #endif
 		execv(cmd->argv[0], cmd->argv);
@@ -103,6 +94,8 @@ int main(void) {
 				if (pipe_make(cmd, (struct command *)node->next))
 					break;
 
+			command_debug_pipe(cmd);
+
 			builtin_idx = is_builtin(cmd);
 			if (builtin_idx) {
 				if (do_builtin(builtin_idx, cmd))
@@ -114,7 +107,7 @@ int main(void) {
 					n_childs++;
 			}
 		}
-#ifdef SHELL_DEBUG
+#ifdef DEBUG_SHELL
 		fprintf(stderr, "debug: n_childs = %d\n", n_childs);
 #endif
 		for (i = 0; i < n_childs; i++)

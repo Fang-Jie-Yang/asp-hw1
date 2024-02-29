@@ -127,7 +127,7 @@ void command_list_free(struct list_head *cmd_list) {
 }
 
 void command_debug_print(struct command *cmd) {
-#ifdef CMD_DEBUG
+#ifdef DEBUG_CMD
 	int i;
 
 	if (cmd == NULL) 
@@ -144,15 +144,31 @@ void command_debug_print(struct command *cmd) {
 }
 
 void command_debug_list_print(struct list_head *cmd_list) {
-#ifdef CMD_DEBUG
+#ifdef DEBUG_CMD
 	struct list_head *node;
 
 	if (cmd_list == NULL)
 		return;
 
 	list_for_each(node, cmd_list) {
-		command_print((struct command *)node);
+		command_debug_print((struct command *)node);
 	}
+#endif
+	return;
+}
+
+void command_debug_pipe(struct command *cmd) {
+#ifdef DEBUG_CMD
+	char debug_info[1024] = "\0";
+	char line[256] = "\0";
+
+	snprintf(line, 256, "(shell) debug: command: %s\n", cmd->argv[0]);
+	strncat(debug_info, line, 1024);
+	snprintf(line, 256, "               |-- pipe  fds: %d %d\n", cmd->pipe_fd[0], cmd->pipe_fd[1]);
+	strncat(debug_info, line, 1024);
+	snprintf(line, 256, "               '-- unused fd: %d \n", cmd->unused_fd);
+	strncat(debug_info, line, 1024);
+	fprintf(stderr, "%s", debug_info);
 #endif
 	return;
 }
