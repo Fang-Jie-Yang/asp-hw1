@@ -31,52 +31,37 @@ int is_builtin(const struct command *cmd) {
 }
 
 int do_builtin(int idx, struct command *cmd) {
+	// note that we don't close "unused_fd" 
+	// because we are in parent, 
+	// the "unused_fd" is actually useful 
+	// for the next command in the job
 	return builtins[idx].fn(cmd);
-}
-
-// we do built-ins in parent process,
-// so if we want to support pipe for built-ins,
-// we actually don't have to free pipes before handling commands.
-// But we do have to free them after the command is finished
-// Note: don't have to worry about adding unused pipe to child,
-//       since we don't fork() new child before built-in fn returns,
-//       and we close the pipes before returning
-static void builtin_free_pipes(struct command *cmd) {
-	pipe_close(&cmd->pipe_fd[0]);	
-	pipe_close(&cmd->pipe_fd[1]);	
 }
 
 static int do_cd(struct command *cmd) {
 
-	int ret = 0;
-
 	if (cmd->argc != 2) {
 		fprintf(stderr, "error: cd: invalid arguments\n");
-		ret = -1;
-		goto end;
+		return -1;
 	}
 
 	if (chdir(cmd->argv[1]) == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
-		ret = -1;
+		return -1;
 	}
 
-end:
-	builtin_free_pipes(cmd);
-	return ret;
+	return 0;
 }
 
 static int do_history(struct command *cmd) {
 
-	int ret = 0;
 	char *endptr;
 	long int n;
 	FILE *out_stream;
 
 	if (cmd->argc > 2) {
 		fprintf(stderr, "error: cd: invalid arguments\n");
-		ret = -1;
-		goto end;
+		return -1;
 	}
 
 	// allowing history output to be piped
@@ -84,8 +69,7 @@ static int do_history(struct command *cmd) {
 		out_stream = fdopen(cmd->pipe_fd[1], "w");
 		if (out_stream == NULL) {
 			fprintf(stderr, "error: %s\n", strerror(errno));
-			ret = -1;
-			goto end;
+			return -1;
 		}
 	} else {
 		out_stream = stdout;
@@ -93,43 +77,35 @@ static int do_history(struct command *cmd) {
 
 	if (cmd->argc == 1) {
 		history_show(out_stream, 10);
-		goto end;
+		return 0;
 	}
 
 	if (strcmp(cmd->argv[1], "-c") == 0) {
 		history_clear();
-		goto end;
+		return 0;
 	} 
 
 	n = strtol(cmd->argv[1], &endptr, 10);
 
 	if (*endptr != '\0') {
 		fprintf(stderr, "error: %s\n", strerror(errno));
-		ret = -1;
-		goto end;	
+		return -1;
 	} 
 	history_show(out_stream, n);
 
-end:
-	builtin_free_pipes(cmd);
-	return ret;
+	return 0;
 }
 
 static int do_exit(struct command *cmd) {
 
-	int ret = 0;
-
 	if (cmd->argc != 1) {
 		fprintf(stderr, "error: cd: invalid arguments\n");
-		ret = -1;
-		goto end;
+		return -1;
 	}
 
-	// exit
+	// XXX: exit
 
-end:
-	builtin_free_pipes(cmd);
-	return ret;
+	return 0;
 }
 
 

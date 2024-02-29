@@ -42,9 +42,7 @@ static inline int do_command(struct command *cmd) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
 	} else {
-		// parent
-		pipe_close(&cmd->pipe_fd[0]);
-		pipe_close(&cmd->pipe_fd[1]);
+
 	}
 	return 0;
 }
@@ -98,14 +96,18 @@ int main(void) {
 
 			builtin_idx = is_builtin(cmd);
 			if (builtin_idx) {
-				if (do_builtin(builtin_idx, cmd))
-					continue;
+				if (do_builtin(builtin_idx, cmd) != 0) {
+					// XXX: trigger exit
+				}
 			} else {
-				if (do_command(cmd))
-					break;
-				else
+				if (do_command(cmd) == 0)
 					n_childs++;
 			}
+			// close the pipe in parent,
+			// so no extra pipes are bring
+			// to the child in the next iter.
+			pipe_close(&cmd->pipe_fd[0]);
+			pipe_close(&cmd->pipe_fd[1]);
 		}
 #ifdef DEBUG_SHELL
 		fprintf(stderr, "debug: n_childs = %d\n", n_childs);
