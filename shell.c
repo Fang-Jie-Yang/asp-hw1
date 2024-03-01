@@ -24,24 +24,26 @@ static inline int do_command(struct command *cmd) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		return -1;
 	}
-	// child
+
 	if(pid == 0){
-		if (pipe_dup2(&cmd->pipe_fd[0], STDIN_FILENO) == -1) {
-			// XXX
+
+		// child process
+
+		if (pipe_dup2(&cmd->pipe_fd[0], STDIN_FILENO) == -1)
 			exit(-1);
-		}
-		if (pipe_dup2(&cmd->pipe_fd[1], STDOUT_FILENO) == -1) {
-			// XXX
+		if (pipe_dup2(&cmd->pipe_fd[1], STDOUT_FILENO) == -1)
 			exit(-1);
-		}
+
 		pipe_close(&cmd->unused_fd);
+
 #ifdef DEBUG_SHELL
 		fprintf(stderr, "(shell) debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
 #endif
 		execv(cmd->argv[0], cmd->argv);
+
+		// if execv() returns, some error had occured
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
-	} else {
 
 	}
 	return 0;
@@ -104,7 +106,7 @@ int main(void) {
 					n_childs++;
 			}
 			// close the pipe in parent,
-			// so no extra pipes are bring
+			// so no extra pipes are brought
 			// to the child in the next iter.
 			pipe_close(&cmd->pipe_fd[0]);
 			pipe_close(&cmd->pipe_fd[1]);
