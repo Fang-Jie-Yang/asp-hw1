@@ -1,8 +1,9 @@
 #ifndef COMMAND_H
 #define COMMAND_H 
 
-#define COMMAND_PIPE  "|"
 #define COMMAND_DELIM " "
+
+#include <sys/types.h>
 
 #include "list.h"
 
@@ -16,13 +17,13 @@ struct command {
 	// char *envp[];
 };
 
-// the number of entries in the returned list
-// will be limited by _POSIX_ARG_MAX
-void command_list_parse(struct list_head *cmd_list, char *s);
-//void command_free(struct command **cmdp);
-void command_list_free(struct list_head *cmd_list);
+struct command *command_parse(char *s);
+// return the number of child fork()'d 
+// => 0 on built-in command
+// => 1 on extern command
+// => -1 on error
+int do_command(struct command *cmd, pid_t *pgid);
+void command_free(struct command **cmdp);
 void command_debug_print(struct command *cmd);
-void command_debug_list_print(struct list_head *cmd_list);
-void command_debug_pipe(struct command *cmd);
 
 #endif

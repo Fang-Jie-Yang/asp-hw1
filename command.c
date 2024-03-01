@@ -3,13 +3,17 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "command.h"
+#include "pipe.h"
+#include "built-in.h"
 
-struct command **command_list_cache = NULL;
+static inline void command_debug_pipe(struct command *cmd);
 
 // parse a space-separated string into struct command
-static struct command *command_parse(char *s) {
+struct command *command_parse(char *s) {
 
 	char *token;
 	int argc = 0;
@@ -55,76 +59,95 @@ fail:
 	return NULL;
 }
 
-// the number of entries in the returned array
-// will be limited by _POSIX_ARG_MAX
-// return a null-terminated list
-void command_list_parse(struct list_head *cmd_list, char *s) {
+// return the number of child fork()'d 
+// => 0 on built-in command
+// => 1 on extern command
+// => -1 on error
+int do_command(struct command *cmd, pid_t *pgid) {
 
-	char *sub;
-	int cnt = 0;
-	struct command *cmd;
+	int builtin_idx;
+	pid_t pid;
 
-	if (*s == '\0')
-		return;
+	command_debug_pipe(cmd);
 
-	// XXX: make sure the given list_head is empry
-	if (!list_empty(cmd_list)) {
-		fprintf(stderr, "warning: command_list_parse: not empty list\n");
-		INIT_LIST_HEAD(cmd_list);
+	builtin_idx = is_builtin(cmd);
+	if (builtin_idx) {
+		if (do_builtin(builtin_idx, cmd) != 0)
+			return -1;
+		return 0;
 	}
 
-	// use strsep because we don't allow contiguous '|'
-	sub = strsep(&s, COMMAND_PIPE);
-	while (sub != NULL) {
-		//fprintf(stderr, "debug: %s\n", sub);
-		cmd = command_parse(sub);
+#ifdef DEBUG_CMD
+	fprintf(stderr, "(cmd) debug: fork() for %s\n", cmd->argv[0]);
+#endif
 
-		if (cmd == NULL) {
-			// we encounter a empty command
-			fprintf(stderr, "error: parsing error\n");
-			goto fail;
-		}
-
-		list_add_tail((struct list_head *)cmd, cmd_list);
-		cnt++;
-
-		if (cnt >= _POSIX_ARG_MAX) {
-			fprintf(stderr, "error: too many arguments\n");
-			goto fail;
-		}
-		sub = strsep(&s, COMMAND_PIPE);
+	pid = fork();
+	if(pid == -1){
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		return -1;
 	}
-	return;
 
-fail:
-	command_list_free(cmd_list);	
+	if(pid == 0){
+
+		// child process
+		// XXX: (fail before execv()) free resources before termination?
+
+		if (*pgid == -1) {
+			// we are the leader
+			if (setpgrp() == -1) {
+				fprintf(stderr, "error: %s\n", strerror(errno));
+				exit(-1);
+			}
+		} else {
+			if (setpgid(0, *pgid) == -1) {
+				fprintf(stderr, "error: %s\n", strerror(errno));
+				exit(-1);
+			}
+		}
+
+		if (pipe_dup2(&cmd->pipe_fd[0], STDIN_FILENO) == -1)
+			exit(-1);
+		if (pipe_dup2(&cmd->pipe_fd[1], STDOUT_FILENO) == -1)
+			exit(-1);
+
+		pipe_close(&cmd->unused_fd);
+
+#ifdef DEBUG_CMD
+		fprintf(stderr, "(cmd) debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
+#endif
+		execv(cmd->argv[0], cmd->argv);
+
+		// if execv() returns, some error had occured
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		exit(-1);
+
+	} else {
+
+		// parent process
+
+		if (*pgid == -1) {
+			// this child is the leader
+			*pgid = pid;
+		}
+
+		// set child pid for child to avoid race cond
+		if (setpgid(pid, *pgid) == -1) {
+			fprintf(stderr, "error: %s\n", strerror(errno));
+			return -1;
+		}
+
+	}
+	return 1;
 }
 
 
-static void command_free(struct command **cmdp) {
+void command_free(struct command **cmdp) {
 	// XXX: sigmask?
 	free(*cmdp);
 	*cmdp = NULL;
 	return;
 }
 
-void command_list_free(struct list_head *cmd_list) {
-
-	struct list_head *node;
-	struct list_head *tmp;
-
-	if (cmd_list == NULL)
-		return;
-
-	node = cmd_list->next;
-	while (node != cmd_list) {
-		tmp = node->next;
-		command_free((struct command **)&node);
-		node = tmp;
-	}
-	INIT_LIST_HEAD(cmd_list);
-	return;
-}
 
 void command_debug_print(struct command *cmd) {
 #ifdef DEBUG_CMD
@@ -143,21 +166,7 @@ void command_debug_print(struct command *cmd) {
 	return;
 }
 
-void command_debug_list_print(struct list_head *cmd_list) {
-#ifdef DEBUG_CMD
-	struct list_head *node;
-
-	if (cmd_list == NULL)
-		return;
-
-	list_for_each(node, cmd_list) {
-		command_debug_print((struct command *)node);
-	}
-#endif
-	return;
-}
-
-void command_debug_pipe(struct command *cmd) {
+static inline void command_debug_pipe(struct command *cmd) {
 #ifdef DEBUG_CMD
 	char debug_info[1024] = "\0";
 	char line[256] = "\0";
