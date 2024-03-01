@@ -5,6 +5,8 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <termios.h>
+#include <signal.h>
 
 #include "command.h"
 #include "pipe.h"
@@ -94,6 +96,7 @@ int do_command(struct command *cmd, pid_t *pgid) {
 
 		if (*pgid == -1) {
 			// we are the leader
+			*pgid = getpid();
 			if (setpgrp() == -1) {
 				fprintf(stderr, "error: %s\n", strerror(errno));
 				exit(-1);
@@ -104,6 +107,16 @@ int do_command(struct command *cmd, pid_t *pgid) {
 				exit(-1);
 			}
 		}
+
+		// set the job to foreground
+		if (tcsetpgrp(STDIN_FILENO, *pgid) == -1) {
+			fprintf(stderr, "error: %s\n", strerror(errno));
+			exit(-1);
+		}
+
+		// restore signal handler, since we have ignored them in main()	
+		signal(SIGTTIN, SIG_DFL);
+		signal(SIGTTOU, SIG_DFL);
 
 		if (pipe_dup2(&cmd->pipe_fd[0], STDIN_FILENO) == -1)
 			exit(-1);

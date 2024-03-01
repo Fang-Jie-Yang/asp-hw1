@@ -111,6 +111,13 @@ int do_job(struct job *job) {
 			ret = -1;
 		}
 	}
+
+	// put shell back to foreground
+	if (tcsetpgrp(STDIN_FILENO, getpid()) == -1) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		ret = -1;
+	}
+
 	return ret;
 }
 
