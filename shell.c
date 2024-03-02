@@ -10,25 +10,8 @@
 
 volatile sig_atomic_t exit_flag = 0;
 
-static void sigint_handler(int sig) {
-	exit_flag = 1;
-	return;
-}
-
-static inline int register_sa(int sig, void (*handler)(int)) {
-	struct sigaction sa;
-	if (sigemptyset(&sa.sa_mask) == -1) {
-		fprintf(stderr, "error: %s\n", strerror(errno));
-		return -1;
-	}
-	sa.sa_handler = handler;
-	sa.sa_flags = 0;
-	if (sigaction(sig, &sa, NULL) == -1) {
-		fprintf(stderr, "error: %s\n", strerror(errno));
-		return -1;
-	}
-	return 0;
-}
+static void sigint_handler(int sig);
+static inline int register_sa(int sig, void (*handler)(int));
 
 int main(void) {
 
@@ -40,13 +23,17 @@ int main(void) {
 
 	// Note that we didn't check:
 	// 1. whether we are in interacive mode
-	// 2. we are in foreground
+	// 2. whether we are in foreground
 
+#ifndef FOR_JUDGE
+	// XXX: somehow we are a session leader when spawned by pexpect(i.e the judge)
 	// create a new process group
 	if (setpgrp() == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
 	}
+#endif
+
 	// control the terminal
 	if (tcsetpgrp(STDIN_FILENO, getpid()) == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
@@ -94,10 +81,30 @@ int main(void) {
 		job_free(job);
 	}
 
-	// *job is free'd before exiting the loop
+	// job is free'd before exiting the loop
 	history_free();
 	if (input != NULL)
 		free(input);
 	
 	return -1;
+}
+
+static void sigint_handler(int sig) {
+	exit_flag = 1;
+	return;
+}
+
+static inline int register_sa(int sig, void (*handler)(int)) {
+	struct sigaction sa;
+	if (sigemptyset(&sa.sa_mask) == -1) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		return -1;
+	}
+	sa.sa_handler = handler;
+	sa.sa_flags = 0;
+	if (sigaction(sig, &sa, NULL) == -1) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
 }
