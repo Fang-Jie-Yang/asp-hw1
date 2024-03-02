@@ -96,6 +96,8 @@ int main(void) {
 
 	// *job is free'd before exiting the loop
 	history_free();
+	if (input != NULL)
+		free(input);
 	
 	return -1;
 }
