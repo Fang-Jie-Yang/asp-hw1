@@ -154,8 +154,7 @@ void job_free(struct job *job) {
 		command_free((struct command **)&node);
 		node = tmp;
 	}
-	//INIT_LIST_HEAD(cmd_list);
-	// XXX: error handling
+
 	free(job);
 	return;
 }
