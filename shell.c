@@ -10,9 +10,24 @@
 
 volatile sig_atomic_t exit_flag = 0;
 
-void catch_sigint(int sig) {
+static void sigint_handler(int sig) {
 	exit_flag = 1;
-	signal(sig, catch_sigint);
+	return;
+}
+
+static inline int register_sa(int sig, void (*handler)(int)) {
+	struct sigaction sa;
+	if (sigemptyset(&sa.sa_mask) == -1) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		return -1;
+	}
+	sa.sa_handler = handler;
+	sa.sa_flags = 0;
+	if (sigaction(sig, &sa, NULL) == -1) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
 }
 
 int main(void) {
@@ -39,11 +54,9 @@ int main(void) {
 	}
 
 	// ignore job control signals
-	if (signal(SIGTTIN, SIG_IGN) == SIG_ERR ||
-	    signal(SIGTTOU, SIG_IGN) == SIG_ERR ||
-	    signal(SIGINT, catch_sigint) == SIG_ERR) {
-
-		fprintf(stderr, "error: %s\n", strerror(errno));
+	if (register_sa(SIGTTIN, SIG_IGN) == -1 ||
+	    register_sa(SIGTTOU, SIG_IGN) == -1 ||
+	    register_sa(SIGINT, sigint_handler) == -1) {
 		exit(-1);
 	}
 
@@ -55,7 +68,9 @@ int main(void) {
 		putchar('$');
 		read_len = getline(&input, &len, stdin);
 		if (read_len < 0) {
-			fprintf(stderr, "error: %s\n", strerror(errno));
+			// we allow the shell to be terminated by Ctrl+c
+			if (errno != EINTR) 
+				fprintf(stderr, "error: %s\n", strerror(errno));
 			break;
 		}
 		// remove trailing newline
@@ -65,7 +80,6 @@ int main(void) {
 		if (history_push(input) == -1)
 			break;
 
-		// XXX: differentiate between empty job & failure
 		job = job_parse(input, &err);
 		if (job == NULL) {
 			if (err != 0)
@@ -78,12 +92,8 @@ int main(void) {
 			exit_flag = 1;
 
 		job_free(job);
-
 	}
 
-#ifdef DEBUG_SHELL
-	fprintf(stderr, "(shell) debug: exiting\n");
-#endif
 	// *job is free'd before exiting the loop
 	history_free();
 	
