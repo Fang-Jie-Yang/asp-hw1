@@ -16,7 +16,7 @@ struct job {
 
 // the number of entries in the returned list
 // will be limited by _POSIX_ARG_MAX
-struct job *job_parse(char *s);
+struct job *job_parse(char *s, int *err);
 // return -1 on error
 int do_job(struct job *job);
 void job_free(struct job *job);

@@ -27,22 +27,22 @@ static inline int pipe_make(struct command *cmd, struct command *next) {
 	return 0;
 }
 
-static inline void pipe_close(int *pipefd) {
+// return -1 on error
+static inline int pipe_close(int *pipefd) {
 
 #ifdef DEBUG_PIPE
 	fprintf(stderr, "(pipe) debug: %*d: close(%d)\n", 5, getpid(), *pipefd);
 #endif
 
 	if (*pipefd == -1)
-		return;
+		return 0;
 
 	if (close(*pipefd) == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
-		// XXX: I think we have to abort in this case
-		// TODO: free resources
-		exit(-1);
+		return -1;
 	}
 	*pipefd = -1;
+	return 0;
 }
 
 // return -1 on error, *pipefd is closed either success or fail
@@ -62,7 +62,9 @@ static inline int pipe_dup2(int *pipefd, int newfd) {
 	if (ret == -1) 
 		fprintf(stderr, "error: %s\n", strerror(errno));
 
-	pipe_close(pipefd);
+	if (pipe_close(pipefd) == -1)
+		return -1;
+
 	return ret;
 }
 

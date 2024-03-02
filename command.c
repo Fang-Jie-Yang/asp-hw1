@@ -28,6 +28,7 @@ struct command *command_parse(char *s) {
 		return NULL;
 	}
 
+	// XXX: try to use less memory
 	res = (struct command *)malloc(sizeof(struct command) + sizeof(char *) * _POSIX_ARG_MAX);
 	if (res == NULL) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
@@ -123,7 +124,8 @@ int do_command(struct command *cmd, pid_t *pgid) {
 		if (pipe_dup2(&cmd->pipe_fd[1], STDOUT_FILENO) == -1)
 			exit(-1);
 
-		pipe_close(&cmd->unused_fd);
+		if (pipe_close(&cmd->unused_fd) == -1) 
+			exit(-1);
 
 #ifdef DEBUG_CMD
 		fprintf(stderr, "(cmd) debug: %*d: exec(%s)\n", 5, getpid(), cmd->argv[0]);
@@ -155,7 +157,6 @@ int do_command(struct command *cmd, pid_t *pgid) {
 
 
 void command_free(struct command **cmdp) {
-	// XXX: sigmask?
 	free(*cmdp);
 	*cmdp = NULL;
 	return;

@@ -14,7 +14,7 @@
 static inline void job_debug_print(struct job *job);
 
 // list is limited by _POSIX_ARG_MAX
-struct job *job_parse(char *s) {
+struct job *job_parse(char *s, int *err) {
 
 	char *sub;
 	int cnt = 0;
@@ -27,7 +27,7 @@ struct job *job_parse(char *s) {
 	job = (struct job *)malloc(sizeof(job));
 	if (job == NULL) {
 		fprintf(stderr, "%s\n", strerror(errno));
-		return NULL;
+		goto fail;
 	}
 
 	job->pgid = -1;
@@ -43,7 +43,7 @@ struct job *job_parse(char *s) {
 		if (cmd == NULL) {
 			// we encounter a empty command
 			fprintf(stderr, "error: parsing error\n");
-			goto fail;
+			goto fail_free;
 		}
 
 		list_add_tail((struct list_head *)cmd, &job->cmd_list);
@@ -51,14 +51,16 @@ struct job *job_parse(char *s) {
 
 		if (cnt >= _POSIX_ARG_MAX) {
 			fprintf(stderr, "error: too many arguments\n");
-			goto fail;
+			goto fail_free;
 		}
 		sub = strsep(&s, JOB_PIPE);
 	}
 	return job;
 
-fail:
+fail_free:
 	job_free(job);	
+fail:
+	*err = 1;
 	return NULL;
 }
 
@@ -91,8 +93,14 @@ int do_job(struct job *job) {
 		// close the pipe in parent,
 		// so no extra pipes are brought
 		// to the child in the next iter.
-		pipe_close(&cmd->pipe_fd[0]);
-		pipe_close(&cmd->pipe_fd[1]);
+		if (pipe_close(&cmd->pipe_fd[0]) == -1) {
+			ret = -1;
+			break;
+		}
+		if (pipe_close(&cmd->pipe_fd[1]) == -1) {
+			ret = -1;
+			break;
+		}
 
 		if (child == -1) {
 			ret = -1;

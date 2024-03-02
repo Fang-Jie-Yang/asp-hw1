@@ -108,6 +108,5 @@ void history_free() {
 		return;
 	}
 
-	// XXX: error handling
 	free(hist);
 }

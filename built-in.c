@@ -8,6 +8,8 @@
 #include "history.h"
 #include "command.h"
 
+extern int exit_flag;
+
 static int do_cd(struct command *cmd);
 static int do_history(struct command *cmd);
 static int do_exit(struct command *cmd);
@@ -103,7 +105,7 @@ static int do_exit(struct command *cmd) {
 		return -1;
 	}
 
-	// XXX: exit
+	exit_flag = 1;
 
 	return 0;
 }
