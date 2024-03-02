@@ -27,7 +27,8 @@ struct job *job_parse(char *s, int *err) {
 	job = (struct job *)malloc(sizeof(job));
 	if (job == NULL) {
 		fprintf(stderr, "%s\n", strerror(errno));
-		goto fail;
+		*err = 1;
+		return NULL;
 	}
 
 	job->pgid = -1;
@@ -37,13 +38,22 @@ struct job *job_parse(char *s, int *err) {
 	// use strsep because we don't allow contiguous '|'
 	sub = strsep(&s, JOB_PIPE);
 	while (sub != NULL) {
-		//fprintf(stderr, "debug: %s\n", sub);
+
 		cmd = command_parse(sub);
 
 		if (cmd == NULL) {
-			// we encounter a empty command
-			fprintf(stderr, "error: parsing error\n");
-			goto fail_free;
+			// we encounterred a empty command,
+			// if there are still command behind,
+			// the syntax is incorrect
+			sub = strsep(&s, JOB_PIPE);
+			if (sub != NULL) {
+				fprintf(stderr, "error: parsing error\n");
+				*err = 1;
+				goto free;
+			} else {
+				// not an error, just empty job
+				goto free;
+			}
 		}
 
 		list_add_tail((struct list_head *)cmd, &job->cmd_list);
@@ -51,16 +61,15 @@ struct job *job_parse(char *s, int *err) {
 
 		if (cnt >= _POSIX_ARG_MAX) {
 			fprintf(stderr, "error: too many arguments\n");
-			goto fail_free;
+			*err = 1;
+			goto free;
 		}
 		sub = strsep(&s, JOB_PIPE);
 	}
 	return job;
 
-fail_free:
+free:
 	job_free(job);	
-fail:
-	*err = 1;
 	return NULL;
 }
 
