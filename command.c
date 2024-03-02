@@ -28,7 +28,6 @@ struct command *command_parse(char *s) {
 		return NULL;
 	}
 
-	// XXX: try to use less memory
 	res = (struct command *)malloc(sizeof(struct command) + sizeof(char *) * _POSIX_ARG_MAX);
 	if (res == NULL) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
@@ -40,7 +39,7 @@ struct command *command_parse(char *s) {
 	res->argc = -1;
 
 	while (token != NULL) {
-		//fprintf(stderr, "-- debug: %s\n", token);
+
 		res->argv[argc] = token;
 		argc++;
 
@@ -54,6 +53,8 @@ struct command *command_parse(char *s) {
 
 	res->argc = argc;
 	res->argv[argc] = (char *)NULL;
+	// may fail, but will return NULL anyway
+	res = (struct command *)realloc(res, sizeof(struct command) + sizeof(char *) * (argc + 1));
 
 	return res;
 
