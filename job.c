@@ -14,23 +14,20 @@
 static inline void job_debug_print(struct job *job);
 
 // list is limited by _POSIX_ARG_MAX
-struct job *job_parse(char *s, int *err) {
+// return NULL on error
+struct job *job_parse(char *s) {
 
 	char *sub;
-	int cnt = 0;
 	struct command *cmd;
 	struct job *job;
+	int cnt = 0;
+	int has_empty_cmd = 0;
 
-	if (*s == '\0')
-		return NULL;
-	
 	job = (struct job *)malloc(sizeof(job));
 	if (job == NULL) {
 		fprintf(stderr, "%s\n", strerror(errno));
-		*err = 1;
 		return NULL;
 	}
-
 	job->pgid = -1;
 	job->n_childs = -1;
 	INIT_LIST_HEAD(&job->cmd_list);
@@ -42,18 +39,13 @@ struct job *job_parse(char *s, int *err) {
 		cmd = command_parse(sub);
 
 		if (cmd == NULL) {
-			// we encounterred a empty command,
-			// if there are still command behind,
-			// the syntax is incorrect
-			sub = strsep(&s, JOB_PIPE);
-			if (sub != NULL) {
-				fprintf(stderr, "error: parsing error\n");
-				*err = 1;
-				goto free;
-			} else {
-				// not an error, just empty job
-				goto free;
-			}
+			// error when parsing command
+			goto free;
+		}
+
+		if (cmd->argc == 0) {
+			// we encounterred a empty command
+			has_empty_cmd = 1;
 		}
 
 		list_add_tail((struct list_head *)cmd, &job->cmd_list);
@@ -61,11 +53,21 @@ struct job *job_parse(char *s, int *err) {
 
 		if (cnt >= _POSIX_ARG_MAX) {
 			fprintf(stderr, "error: too many arguments\n");
-			*err = 1;
 			goto free;
 		}
 		sub = strsep(&s, JOB_PIPE);
 	}
+
+	if (has_empty_cmd) {
+		if (cnt == 1) {
+			free(cmd);
+			INIT_LIST_HEAD(&job->cmd_list);
+		} else {
+			fprintf(stderr, "error: parsing error\n");
+			goto free;
+		}
+	}
+
 	return job;
 
 free:

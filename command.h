@@ -16,6 +16,7 @@ struct command {
 	char *argv[];
 };
 
+// return NULL on error
 struct command *command_parse(char *s);
 // return the number of child fork()'d 
 // => 0 on built-in command

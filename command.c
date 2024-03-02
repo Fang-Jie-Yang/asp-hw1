@@ -15,18 +15,13 @@
 static inline void command_debug_pipe(struct command *cmd);
 
 // parse a space-separated string into struct command
+// return NULL on error
 struct command *command_parse(char *s) {
 
 	char *token;
 	int argc = 0;
 	struct command *res;
-
-	token = strtok(s, COMMAND_DELIM);
-	if (token == NULL) {
-		// an empty command
-		//fprintf(stderr, "error: parsing error\n");
-		return NULL;
-	}
+	struct command *tmp;
 
 	res = (struct command *)malloc(sizeof(struct command) + sizeof(char *) * _POSIX_ARG_MAX);
 	if (res == NULL) {
@@ -38,6 +33,7 @@ struct command *command_parse(char *s) {
 	res->unused_fd = -1;
 	res->argc = -1;
 
+	token = strtok(s, COMMAND_DELIM);
 	while (token != NULL) {
 
 		res->argv[argc] = token;
@@ -53,9 +49,12 @@ struct command *command_parse(char *s) {
 
 	res->argc = argc;
 	res->argv[argc] = (char *)NULL;
-	// may fail, but will return NULL anyway
-	res = (struct command *)realloc(res, sizeof(struct command) + sizeof(char *) * (argc + 1));
-
+	tmp = (struct command *)realloc(res, sizeof(struct command) + sizeof(char *) * (argc + 1));
+	if (tmp == NULL) {
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		goto fail;
+	}
+	res = tmp;
 	return res;
 
 fail:

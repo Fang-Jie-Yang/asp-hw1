@@ -19,7 +19,6 @@ int main(void) {
 	size_t len = 0;
 	ssize_t read_len;
 	struct job *job;
-	int err = 0;
 
 	// Note that we didn't check:
 	// 1. whether we are in interacive mode
@@ -67,13 +66,9 @@ int main(void) {
 		if (history_push(input) == -1)
 			break;
 
-		job = job_parse(input, &err);
-		if (job == NULL) {
-			if (err != 0)
-				break;
-			// just a empty job
-			continue;
-		}
+		job = job_parse(input);
+		if (job == NULL)
+			break;
 
 		if (do_job(job) == -1)
 			exit_flag = 1;
