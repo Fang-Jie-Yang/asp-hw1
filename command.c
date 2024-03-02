@@ -68,13 +68,13 @@ fail:
 // => -1 on error
 int do_command(struct command *cmd, pid_t *pgid) {
 
-	int builtin_idx;
+	int builtin_idx = -1;
 	pid_t pid;
 
 	command_debug_pipe(cmd);
 
 	builtin_idx = is_builtin(cmd);
-	if (builtin_idx) {
+	if (builtin_idx != -1) {
 		if (do_builtin(builtin_idx, cmd) != 0)
 			return -1;
 		return 0;

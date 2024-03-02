@@ -29,7 +29,7 @@ int is_builtin(const struct command *cmd) {
 		}
 		i++;
 	}
-	return 0;
+	return -1;
 }
 
 int do_builtin(int idx, struct command *cmd) {
