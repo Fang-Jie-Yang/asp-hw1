@@ -8,15 +8,24 @@
 #include "history.h"
 #include "job.h"
 
+volatile sig_atomic_t exit_flag = 0;
+
+void catch_sigint(int sig) {
+	exit_flag = 1;
+	signal(sig, catch_sigint);
+}
+
 int main(void) {
 
 	char *input = NULL;
 	size_t len = 0;
 	ssize_t read_len;
 	struct job *job;
+	int err = 0;
 
-	// Note that we didn't check whether we are in interacive mode
-	// and that we are in foreground
+	// Note that we didn't check:
+	// 1. whether we are in interacive mode
+	// 2. we are in foreground
 
 	// create a new process group
 	if (setpgrp() == -1) {
@@ -29,16 +38,19 @@ int main(void) {
 		exit(-1);
 	}
 
-	// TODO: Ctrl+c signal handler
-	// Note that we need to make sure that
-	// we do not read/write from the terminal
-	// when we are in background
-	signal(SIGTTIN, SIG_IGN);
-	signal(SIGTTOU, SIG_IGN);
+	// ignore job control signals
+	if (signal(SIGTTIN, SIG_IGN) == SIG_ERR ||
+	    signal(SIGTTOU, SIG_IGN) == SIG_ERR ||
+	    signal(SIGINT, catch_sigint) == SIG_ERR) {
 
-	history_init();
+		fprintf(stderr, "error: %s\n", strerror(errno));
+		exit(-1);
+	}
 
-	while (1) {
+	if (history_init() == -1)
+		exit(-1);
+
+	while (exit_flag != 1) {
 
 		putchar('$');
 		read_len = getline(&input, &len, stdin);
@@ -50,21 +62,30 @@ int main(void) {
 		if (input[read_len - 1] == '\n')
 			input[read_len - 1] = '\0';
 
-		// XXX: handle error
-		history_push(input);
+		if (history_push(input) == -1)
+			break;
 
 		// XXX: differentiate between empty job & failure
-		job = job_parse(input);
-		if (job == NULL)
+		job = job_parse(input, &err);
+		if (job == NULL) {
+			if (err != 0)
+				break;
+			// just a empty job
 			continue;
-
-		if (do_job(job) == -1) {
-			break;
 		}
+
+		if (do_job(job) == -1)
+			exit_flag = 1;
 
 		job_free(job);
 
 	}
 
-	return 0;
+#ifdef DEBUG_SHELL
+	fprintf(stderr, "(shell) debug: exiting\n");
+#endif
+	// *job is free'd before exiting the loop
+	history_free();
+	
+	return -1;
 }
