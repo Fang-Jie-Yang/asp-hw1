@@ -1,33 +1,15 @@
 
-SHELL := /bin/bash
-CC = gcc
-CFLAGS = -Wall
+CC := gcc
+CFLAGS := -Wall
 
-DEBUG_FLAGS = 
 DEBUG_ALL ?= 0
-DEBUG_PIPE ?= 0
-DEBUG_CMD ?= 0
-DEBUG_SHELL ?= 0
-DEBUG_HIST ?= 0
-DEBUG_JOB ?= 0
+DEBUG_VARS := DEBUG_PIPE DEBUG_CMD DEBUG_SHELL DEBUG_HIST DEBUG_JOB
+
+DEBUG_FLAGS =
 ifeq ($(DEBUG_ALL), 1)
-	DEBUG_FLAGS += -DDEBUG_PIPE -DDEBUG_CMD -DDEBUG_SHELL -DDEBUG_HIST -DDEBUG_JOB
+	DEBUG_FLAGS += $(foreach flag,$(DEBUG_VARS),-D$(flag))
 else
-ifeq ($(DEBUG_PIPE), 1)
-	DEBUG_FLAGS += -DDEBUG_PIPE
-endif
-ifeq ($(DEBUG_CMD), 1)
-	DEBUG_FLAGS += -DDEBUG_CMD
-endif
-ifeq ($(DEBUG_SHELL), 1)
-	DEBUG_FLAGS += -DDEBUG_SHELL
-endif
-ifeq ($(DEBUG_HIST), 1)
-	DEBUG_FLAGS += -DDEBUG_HIST
-endif
-ifeq ($(DEBUG_JOB), 1)
-	DEBUG_FLAGS += -DDEBUG_JOB
-endif
+	DEBUG_FLAGS += $(foreach flag,$(DEBUG_VARS),$(if $($(flag)), -D$(flag)))
 endif
 
 SRCS = list.h pipe.h command.c command.h built-in.c built-in.h history.c history.h shell.c job.c job.h
