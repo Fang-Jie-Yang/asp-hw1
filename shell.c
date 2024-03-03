@@ -19,19 +19,26 @@ int main(void) {
 	size_t len = 0;
 	ssize_t read_len;
 	struct job *job;
+	pid_t sid;
 
 	// Note that we didn't check:
 	// 1. whether we are in interacive mode
 	// 2. whether we are in foreground
 
-#ifndef FOR_JUDGE
-	// XXX: somehow we are a session leader when spawned by pexpect(i.e the judge)
-	// create a new process group
-	if (setpgrp() == -1) {
+	sid = getsid(getpid());
+	if (sid == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		exit(-1);
 	}
-#endif
+	// if we are a session leader (e.g when spawned by pexpect)
+	// we cannot create a process group
+	if (sid != getpid()) {
+		// create a new process group
+		if (setpgrp() == -1) {
+			fprintf(stderr, "error: %s\n", strerror(errno));
+			exit(-1);
+		}
+	}
 
 	// control the terminal
 	if (tcsetpgrp(STDIN_FILENO, getpid()) == -1) {
