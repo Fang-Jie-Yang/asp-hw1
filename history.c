@@ -95,7 +95,7 @@ void history_show(FILE *out, long int n) {
 	start = ((hist->cnt - n) > 0)? hist->cnt - n : 0;
 
 	for (i = start; i < hist->cnt; i++)
-		fprintf(out, "%*ld  %s\n", HISTORY_NUM_WIDTH, i, hist->buf[i]);
+		fprintf(out, "%*ld  %s\n", HISTORY_NUM_WIDTH, i + 1, hist->buf[i]);
 	fflush(out);
 
 	return;
