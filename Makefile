@@ -14,6 +14,9 @@ endif
 
 SRCS = list.h pipe.h command.c command.h built-in.c built-in.h history.c history.h shell.c job.c job.h
 OBJS = command.o history.o built-in.o job.o
+.PHONY: debug default clean
+
+default: cs5374_sh
 
 job.o: job.c job.h command.h list.h pipe.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -30,6 +33,8 @@ built-in.o: built-in.c built-in.h pipe.h history.h command.h
 cs5374_sh: shell.c $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
-.PHONY: debug
 debug: $(SRCS)
 	$(CC) $(CFLAGS) $(DEBUG_FLAGS) $^ -o cs5374_sh
+
+clean:
+	rm *.o cs5374_sh
