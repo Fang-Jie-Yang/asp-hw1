@@ -44,12 +44,12 @@ static int do_cd(struct command *cmd) {
 
 	if (cmd->argc != 2) {
 		fprintf(stderr, "error: cd: invalid arguments\n");
-		return -1;
+		return 0;
 	}
 
 	if (chdir(cmd->argv[1]) == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
-		return -1;
+		return 0;
 	}
 
 	return 0;
@@ -62,8 +62,8 @@ static int do_history(struct command *cmd) {
 	FILE *out_stream;
 
 	if (cmd->argc > 2) {
-		fprintf(stderr, "error: cd: invalid arguments\n");
-		return -1;
+		fprintf(stderr, "error: history: invalid arguments\n");
+		return 0;
 	}
 
 	// allowing history output to be piped
@@ -90,8 +90,8 @@ static int do_history(struct command *cmd) {
 	n = strtol(cmd->argv[1], &endptr, 10);
 
 	if (*endptr != '\0') {
-		fprintf(stderr, "error: %s\n", strerror(errno));
-		return -1;
+		fprintf(stderr, "error: invalid number\n");
+		return 0;
 	} 
 	history_show(out_stream, n);
 
@@ -101,8 +101,8 @@ static int do_history(struct command *cmd) {
 static int do_exit(struct command *cmd) {
 
 	if (cmd->argc != 1) {
-		fprintf(stderr, "error: cd: invalid arguments\n");
-		return -1;
+		fprintf(stderr, "error: exit: invalid arguments\n");
+		return 0;
 	}
 
 	exit_flag = 1;
