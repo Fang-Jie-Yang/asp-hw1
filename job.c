@@ -11,10 +11,11 @@
 #include "command.h"
 #include "pipe.h"
 
+static void free_cmd_list(struct job *job);
 static inline void job_debug_print(struct job *job);
 
 // list is limited by _POSIX_ARG_MAX
-// return NULL on error
+// return NULL on *system* error
 struct job *job_parse(char *s) {
 
 	char *sub;
@@ -22,6 +23,7 @@ struct job *job_parse(char *s) {
 	struct job *job;
 	int cnt = 0;
 	int has_empty_cmd = 0;
+	int parsing_err = 0;
 
 	job = (struct job *)malloc(sizeof(job));
 	if (job == NULL) {
@@ -39,8 +41,9 @@ struct job *job_parse(char *s) {
 		cmd = command_parse(sub);
 
 		if (cmd == NULL) {
-			// error when parsing command
-			goto free;
+			// *system* error when parsing command
+			job_free(job);
+			return NULL;
 		}
 
 		if (cmd->argc == 0) {
@@ -48,31 +51,34 @@ struct job *job_parse(char *s) {
 			has_empty_cmd = 1;
 		}
 
+		if (cmd->argc == -1) {
+			// a command with too many arguments
+			parsing_err = 1;
+			break;
+		}
+
 		list_add_tail((struct list_head *)cmd, &job->cmd_list);
 		cnt++;
 
 		if (cnt >= _POSIX_ARG_MAX) {
-			fprintf(stderr, "error: too many arguments\n");
-			goto free;
+			parsing_err = 1;
+			break;
 		}
 		sub = strsep(&s, JOB_PIPE);
 	}
 
-	if (has_empty_cmd) {
-		if (cnt == 1) {
-			free(cmd);
-			INIT_LIST_HEAD(&job->cmd_list);
-		} else {
-			fprintf(stderr, "error: parsing error\n");
-			goto free;
-		}
+	if (has_empty_cmd && cnt != 1)
+		parsing_err = 1;
+
+	if (parsing_err)
+		fprintf(stderr, "error: parsing error\n");
+
+	if (parsing_err || has_empty_cmd) {
+		// we return a job with empty cmd list in both cases
+		free_cmd_list(job);
 	}
 
 	return job;
-
-free:
-	job_free(job);	
-	return NULL;
 }
 
 // return -1 on error
@@ -140,13 +146,13 @@ int do_job(struct job *job) {
 	return ret;
 }
 
-void job_free(struct job *job) {
+static void free_cmd_list(struct job *job) {
 
 	struct list_head *node;
 	struct list_head *tmp;
 
 	if (job == NULL) {
-		fprintf(stderr, "warning: job_free() on NULL ptr\n");
+		fprintf(stderr, "warning: free_cmd_list() on NULL ptr\n");
 		return;
 	}
 
@@ -156,7 +162,18 @@ void job_free(struct job *job) {
 		command_free((struct command **)&node);
 		node = tmp;
 	}
+	INIT_LIST_HEAD(&job->cmd_list);
+	return;
+}
 
+void job_free(struct job *job) {
+
+	if (job == NULL) {
+		fprintf(stderr, "warning: job_free() on NULL ptr\n");
+		return;
+	}
+
+	free_cmd_list(job);
 	free(job);
 	return;
 }

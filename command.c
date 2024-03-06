@@ -15,51 +15,48 @@
 static inline void command_debug_pipe(struct command *cmd);
 
 // parse a space-separated string into struct command
-// return NULL on error
+// return NULL on *system* error
 struct command *command_parse(char *s) {
 
 	char *token;
 	int argc = 0;
-	struct command *res;
 	struct command *tmp;
+	struct command *res;
 
-	res = (struct command *)malloc(sizeof(struct command) + sizeof(char *) * _POSIX_ARG_MAX);
-	if (res == NULL) {
+	tmp = (struct command *)malloc(sizeof(struct command) + sizeof(char *) * _POSIX_ARG_MAX);
+	if (tmp == NULL) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		return NULL;
 	}
-	res->pipe_fd[0] = -1;
-	res->pipe_fd[1] = -1;
-	res->unused_fd = -1;
-	res->argc = -1;
+	tmp->pipe_fd[0] = -1;
+	tmp->pipe_fd[1] = -1;
+	tmp->unused_fd = -1;
+	tmp->argc = -1;
 
 	token = strtok(s, COMMAND_DELIM);
 	while (token != NULL) {
 
-		res->argv[argc] = token;
+		tmp->argv[argc] = token;
 		argc++;
 
 		if (argc >= _POSIX_ARG_MAX) {
 			fprintf(stderr, "error: too many arguments\n");
-			goto fail;
+			argc = -1;
+			break;
 		}
 
 		token = strtok(NULL, COMMAND_DELIM);
 	}
 
-	res->argc = argc;
-	res->argv[argc] = (char *)NULL;
-	tmp = (struct command *)realloc(res, sizeof(struct command) + sizeof(char *) * (argc + 1));
-	if (tmp == NULL) {
+	tmp->argc = argc;
+	tmp->argv[argc] = (char *)NULL;
+	res = (struct command *)realloc(tmp, sizeof(struct command) + sizeof(char *) * (argc + 1));
+	if (res == NULL) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
-		goto fail;
+		free(tmp);
+		return NULL;
 	}
-	res = tmp;
 	return res;
-
-fail:
-	free(res);
-	return NULL;
 }
 
 // return the number of child fork()'d 
