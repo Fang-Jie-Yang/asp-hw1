@@ -47,6 +47,11 @@ static int do_cd(struct command *cmd) {
 		return 0;
 	}
 
+	if (*cmd->argv[1] != '/') {
+		fprintf(stderr, "error: cd: relative path is not allowed\n");
+		return 0;
+	}
+
 	if (chdir(cmd->argv[1]) == -1) {
 		fprintf(stderr, "error: %s\n", strerror(errno));
 		return 0;
